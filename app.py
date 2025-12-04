@@ -4,34 +4,40 @@ from dotenv import load_dotenv
 import os
 
 load_dotenv()
-API_KEY = os.getenv("GEMINI_API_KEY")
-if not API_KEY:
-    st.error("Set GEMINI_API_KEY in .env")
-    st.stop()
 
-client = genai.Client(api_key=API_KEY)
+# Create Gemini client once
+if "client" not in st.session_state:
+    st.session_state.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-# Initialize chat session (one per Streamlit session)
-if "chat_obj" not in st.session_state:
-    st.session_state.chat_obj = client.chats.create(model="gemini-2.5-flash")
+# Create chat session once
+if "chat" not in st.session_state:
+    st.session_state.chat = st.session_state.client.chats.create(model="gemini-2.5-flash")
 
-st.title("🤖 Gemini Chatbot")
-
+# Store conversation history
 if "history" not in st.session_state:
     st.session_state.history = []
 
+st.title("🤖 Gemini Chatbot")
+
+# SINGLE text input field
 user_input = st.text_input("You:")
 
 if user_input:
-    chat = st.session_state.chat_obj
     try:
-        resp = chat.send_message(user_input)
-        bot_reply = resp.text
+        resp = st.session_state.chat.send_message(user_input)
+        bot_msg = resp.text
+
+        # Save to history
+        st.session_state.history.append(
+            {"user": user_input, "bot": bot_msg}
+        )
+
     except Exception as e:
-        bot_reply = f"Error: {e}"
+        st.error(f"Error: {str(e)}")
 
-    st.session_state.history.append({"user": user_input, "bot": bot_reply})
+# Display chat history
+for chat in st.session_state.history:
+    st.markdown(f"**You:** {chat['user']}")
+    st.markdown(f"**Bot:** {chat['bot']}")
+    st.markdown("---")
 
-for turn in st.session_state.history:
-    st.markdown(f"**You:** {turn['user']}")
-    st.markdown(f"**Bot:** {turn['bot']}")

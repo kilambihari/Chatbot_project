@@ -3,56 +3,90 @@ from google import genai
 from dotenv import load_dotenv
 import os
 
+# Load environment variables
 load_dotenv()
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-# Create Gemini client once
-if "client" not in st.session_state:
-    st.session_state.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+# --- DARK MODE TOGGLE ---
+if "dark_mode" not in st.session_state:
+    st.session_state.dark_mode = False
 
-# Create chat session once
-if "chat" not in st.session_state:
-    st.session_state.chat = st.session_state.client.chats.create(model="gemini-2.5-flash")
+def toggle_dark_mode():
+    st.session_state.dark_mode = not st.session_state.dark_mode
 
-# Store conversation history
+# Apply dark mode styling
+if st.session_state.dark_mode:
+    st.markdown("""
+        <style>
+        body, .stApp {
+            background-color: #0d1117 !important;
+        }
+        .bubble-user {
+            background-color: #0b8043;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin: 5px;
+            width: fit-content;
+            margin-left: auto;
+        }
+        .bubble-bot {
+            background-color: #30363d;
+            color: #fff;
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin: 5px;
+            width: fit-content;
+            margin-right: auto;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+else:
+    st.markdown("""
+        <style>
+        .bubble-user {
+            background-color: #dcf8c6;
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin: 5px;
+            width: fit-content;
+            margin-left: auto;
+        }
+        .bubble-bot {
+            background-color: #ececec;
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin: 5px;
+            width: fit-content;
+            margin-right: auto;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+# --- CHAT SESSION ---
+if "gemini_chat" not in st.session_state:
+    st.session_state.gemini_chat = client.chats.create(model="gemini-2.5-flash")
+
 if "history" not in st.session_state:
     st.session_state.history = []
 
+# --- UI ---
 st.title("🤖 Gemini Chatbot")
 
+# Dark mode button
+st.button("🌓 Toggle Dark Mode", on_click=toggle_dark_mode)
 
-# --------------------------
-# 👉 CLEAR HISTORY BUTTON
-# --------------------------
-if st.button("🗑️ Clear Chat History"):
-    st.session_state.history = []              # clear history
-    st.session_state.chat = st.session_state.client.chats.create(model="gemini-2.5-flash")  # new chat
-    st.success("Chat history cleared!")
-
-
-# --------------------------
-# 👉 USER INPUT
-# --------------------------
+# User input
 user_input = st.text_input("You:")
 
 if user_input:
-    try:
-        resp = st.session_state.chat.send_message(user_input)
-        bot_msg = resp.text
+    resp = st.session_state.gemini_chat.send_message(user_input)
+    st.session_state.history.append({"user": user_input, "bot": resp.text})
 
-        # Save in history
-        st.session_state.history.append(
-            {"user": user_input, "bot": bot_msg}
-        )
-
-    except Exception as e:
-        st.error(f"Error: {str(e)}")
-
-
-# --------------------------
-# 👉 DISPLAY HISTORY
-# --------------------------
+# --- Display chat history with WhatsApp-style bubbles ---
+st.markdown("### Chat History")
 for chat in st.session_state.history:
-    st.markdown(f"**You:** {chat['user']}")
-    st.markdown(f"**Bot:** {chat['bot']}")
-    st.markdown("---")
+    st.markdown(f"<div class='bubble-user'>🙋‍♂️ {chat['user']}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='bubble-bot'>🤖 {chat['bot']}</div>", unsafe_allow_html=True)
+
 

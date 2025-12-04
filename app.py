@@ -19,7 +19,19 @@ if "history" not in st.session_state:
 
 st.title("🤖 Gemini Chatbot")
 
-# SINGLE text input field
+
+# --------------------------
+# 👉 CLEAR HISTORY BUTTON
+# --------------------------
+if st.button("🗑️ Clear Chat History"):
+    st.session_state.history = []              # clear history
+    st.session_state.chat = st.session_state.client.chats.create(model="gemini-2.5-flash")  # new chat
+    st.success("Chat history cleared!")
+
+
+# --------------------------
+# 👉 USER INPUT
+# --------------------------
 user_input = st.text_input("You:")
 
 if user_input:
@@ -27,7 +39,7 @@ if user_input:
         resp = st.session_state.chat.send_message(user_input)
         bot_msg = resp.text
 
-        # Save to history
+        # Save in history
         st.session_state.history.append(
             {"user": user_input, "bot": bot_msg}
         )
@@ -35,7 +47,10 @@ if user_input:
     except Exception as e:
         st.error(f"Error: {str(e)}")
 
-# Display chat history
+
+# --------------------------
+# 👉 DISPLAY HISTORY
+# --------------------------
 for chat in st.session_state.history:
     st.markdown(f"**You:** {chat['user']}")
     st.markdown(f"**Bot:** {chat['bot']}")
